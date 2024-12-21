@@ -85,3 +85,8 @@ Resources:
       # To make it unique, we're using the name of the project, the stage, and
       # "ec2" as the prefix.
       KeyName: !Sub "api-deploy-ec2-${self:provider.stage}"
+
+Outputs:
+  PublicIp:
+    Description: The public IP of the EC2 instance
+    Value: !GetAtt Ec2Instance.PublicIp
