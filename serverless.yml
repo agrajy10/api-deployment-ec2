@@ -1,0 +1,87 @@
+service: api-deploy-ec2
+description: Deploy API using EC2
+
+# This template creates an EC2 instance that deploys a serverless API. The
+# instance is running a nodejs environment with the awscli and the
+# application code is cloned from a github repo. The application is
+# started when the instance is created.
+
+Resources:
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      # The image id of the instance. This is an Amazon Linux 2 image.
+      ImageId: ami-0bdb1d6c22b2893b9
+      # The type of instance to create. This is a small instance with 1
+      # virtual CPU and 1 GB of memory.
+      InstanceType: t2.micro
+      # The list of security groups to associate with the instance.
+      # This is a list of references to other resources that are defined
+      # in the same template.
+      SecurityGroupIds:
+        - !Ref Ec2SecurityGroup
+      # The name of the key pair to use for SSH connections to the
+      # instance.
+      KeyName: !Ref KeyName
+      # The user data that is passed to the instance. This is a script
+      # that is run when the instance is created.
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # This is a script that is run when the instance is created.
+
+          # Update the package list and install some packages that are
+          # required by the application.
+          yum update -y
+          yum install -y git
+          curl -sL https://rpm.nodesource.com/setup_20.x | bash -
+          yum install -y nodejs
+
+          # Clone the application code from a github repo.
+          git clone https://github.com/agrajy10/api-deployment-ec2 /home/ec2-user/api-deployment-ec2
+
+          # Change to the directory where the application code is located
+          # and install the dependencies using npm.
+          cd /home/ec2-user/api-deployment-ec2
+          npm install
+
+          # Start the application using npm.
+          npm start
+
+          # Print a message to indicate that the user data has finished
+          # running.
+          echo "Finished user data"
+
+  Ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      # The description of the security group.
+      GroupDescription: !Sub "Allow inbound and outbound traffic from anywhere"
+      # The list of ingress rules that allow traffic to reach the
+      # instance.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      # The list of egress rules that allow traffic to leave the
+      # instance.
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  # A key pair is a pair of public and private keys that can be used to connect to
+  # an EC2 instance securely. The public key is used to encrypt data that is
+  # decrypted by the private key.
+  #
+  # The KeyName property is a string that is used to identify the key pair.
+  # It must be unique within a region.
+  KeyName:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      # The name of the key pair. This should be unique within a region.
+      # To make it unique, we're using the name of the project, the stage, and
+      # "ec2" as the prefix.
+      KeyName: !Sub "api-deploy-ec2-${self:provider.stage}"
