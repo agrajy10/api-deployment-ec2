@@ -14,14 +14,15 @@ resources:
           Fn::Base64: !Sub |
             #!/bin/bash
             yum update -y
-            yum install -y git
-            curl -sL https://rpm.nodesource.com/setup_22.x | bash -
-            yum install -y nodejs
-            npm install -g npm
-            git clone https://github.com/agrajy10/api-deployment-ec2.git
-            cd api-deployment-ec2
-            npm install
-            npm start
+            yum install -y docker
+            systemctl enable docker
+            systemctl start docker
+            docker pull agrajy10/api-deployment-ec2
+            # Start the Docker container in detached mode
+            # Map port 80 of the host (EC2 instance) to port 3000 of the container
+            # This will allow us to access the web application by visiting the public IP of the EC2
+            # instance on port 80
+            docker run -d -p 80:3000 agrajy10/api-deployment-ec2
 
     InstanceSecurityGroup:
       Type: AWS::EC2::SecurityGroup
